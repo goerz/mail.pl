@@ -107,7 +107,9 @@ my %params = (to                => '',      # That's the only recipient part tha
               cc_list           => "",      # CC the email to the list of addresses specified in this file
               bcc_list          => "",      # BCC the email to the list of addresses specified in this file
               expandlist        => "",      # Expand email addresses with the information from this file
-              recipientrules    => ""       # Read per-recipient rules from this file
+              recipientrules    => "",      # Read per-recipient rules from this file
+              messageid         => "",      # Message ID for message to send. If not specified, this will be auto-generated
+              replyto           => ""       # Message ID of message that is being replied to
               );
 
 
@@ -263,10 +265,22 @@ if ($params{signature}){ # append the signature
 my $head = $msg->head;
 $head->replace("X-Mailer", $params{xmailer});
 
+# set In-Reply-To and References
+if ($params{replyto} =~ /.+@.+/){
+    my $replyto = $params{replyto};
+    $head->replace("In-Reply-To", "<$replyto>");
+    $head->replace("References", "<$replyto>");
+}
+
 # set the Message-ID
-my $id_hostname = ($params{from} =~ /^(.*)@(.*)$/)? $2: 'localhost';
-$id_hostname =~ s/[<>]//g;
-my $mid = Email::MessageID->new( host => $id_hostname );
+my $mid = '';
+if ($params{messageid} =~ /.+@.+/){
+    $mid = $params{messageid}
+} else {
+    my $id_hostname = ($params{from} =~ /^(.*)@(.*)$/)? $2: 'localhost';
+    $id_hostname =~ s/[<>]//g;
+    $mid = Email::MessageID->new( host => $id_hostname );
+}
 $head->replace("Message-ID", "<$mid>");
 
 # encryption and signing
